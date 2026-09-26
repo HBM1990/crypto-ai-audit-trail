@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.venv/
+venv/
+
+# Local config
+.env
+.env.local
+
+# Keys — NEVER commit signing keys
+keys/
+*.pem
+*.key
+
+# Generated logs (commit only examples)
+audit.jsonl
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Test artifacts
+.pytest_cache/
+htmlcov/
+.coverage
