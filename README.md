@@ -4,7 +4,7 @@ Tamper-evident audit logging for AI workflows using Ed25519 signatures and SHA25
 
 ## What this is
 
-A reference implementation showing how to make AI workflow logs **cryptographically verifiable**. Each entry is:
+A reference implementation showing how to make AI workflow logs **cryptographically verifiable**. Each entry in the log is:
 
 1. **Signed** with Ed25519 — proves it was written by the holder of the private key.
 2. **Hashed** with SHA256 — produces a deterministic fingerprint of the entry contents.
@@ -18,16 +18,24 @@ If anyone modifies a single byte of any entry, deletes an entry, or reorders ent
 - A replacement for centralized logging infrastructure.
 - A consensus mechanism (this is single-signer; multi-signer would need a threshold scheme).
 
-## Why this matters for AI
+## Why this matters
 
 AI systems need audit trails that survive scrutiny:
 
 - **Regulators** want to know what your model actually did, not what you say it did.
 - **Customers** want to verify the AI's outputs match what they were promised.
 - **Engineers** want to debug failures without trusting the logs blindly.
-- **You** want to prove your system wasn't compromised after the fact.
+- **Operators** want to prove their system wasn't compromised after the fact.
 
 A cryptographically-signed chain is the answer: it's a log that **can't lie**.
+
+## The three guarantees
+
+| Guarantee | Mechanism | Catches |
+|---|---|---|
+| **Authenticity** | Ed25519 signature | Forged entries, entries not from the signer |
+| **Integrity** | SHA256 entry hash | Modified entry contents |
+| **Ordering & completeness** | Hash chain (prev_hash) | Deleted, inserted, or reordered entries |
 
 ## Quick start
 
@@ -101,6 +109,35 @@ python src/audit_trail.py verify --log audit.jsonl --pubkey keys/signer.pub
 
 Every tamper attempt is caught at the exact line that broke the chain.
 
+## Run the full demo
+
+```bash
+bash examples/run_demo.sh
+```
+
+This generates a keypair, appends four entries, verifies, then tampers with an entry and re-verifies — printing the exact detection at the exact line.
+
+## Why Ed25519
+
+Ed25519 is the right choice for signing audit entries because:
+
+1. **Speed** — signing and verification are fast, much faster than RSA.
+2. **Compact** — 64-byte signatures, 32-byte public keys.
+3. **Deterministic** — same input always produces the same signature.
+4. **Side-channel resistant** — the reference implementation is constant-time.
+5. **Standard** — RFC 8032, supported by every major language's crypto library.
+
+For audit logging specifically, Ed25519 is the modern best practice. RSA signatures are larger and slower; ECDSA (without EdDSA's deterministic nonce) has historically been a source of key-reuse bugs.
+
+## Threat model
+
+**Trusted:** the signer (holder of the private key) and the implementation (this code).
+**Untrusted:** the log file (might be modified, deleted, or replaced) and the storage medium (might fail or be tampered with at rest).
+**Adversary capabilities:** read, modify, delete, reorder, or insert entries (without the private key).
+
+What this chain protects against: forgery, modification, deletion, reordering.
+What it does NOT protect against: the signer themselves lying (use multi-signer for that), loss of the private key (key management is out of scope).
+
 ## File layout
 
 ```
@@ -114,16 +151,9 @@ Every tamper attempt is caught at the exact line that broke the chain.
 │   └── architecture.md
 └── examples/
     ├── run_demo.sh        # End-to-end demo
-    └── audit.jsonl        # Sample verified log
+    ├── audit.jsonl        # Sample verified log
+    └── keys/              # Example keypair (regenerate for production)
 ```
-
-## The three guarantees
-
-| Guarantee | Mechanism | Catches |
-|---|---|---|
-| **Authenticity** | Ed25519 signature | Forged entries, entries not from the signer |
-| **Integrity** | SHA256 entry hash | Modified entry contents |
-| **Ordering & completeness** | Hash chain (prev_hash) | Deleted, inserted, or reordered entries |
 
 ## License
 
